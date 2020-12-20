@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+    <LANGU>D</LANGU>
+    <DESCRIPT>Predictive Maintenance: Sensor Events</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>GET_ERR_PROBABILITY</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>returns last error probability</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>G_ARBPL</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Maschine</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>G_SENSVAL1</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Sensor value TEMP</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>G_SENSVAL2</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Sensor value HUMID</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>NOTIFY_CLIENTS</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>sends new error probability to clients via push msg</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>PROCESS_INCOMING</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Processes incoming sensor ping</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>SAVE_EVENT</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Save Sensorevent</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_MAINT_SENSEVT</CLSNAME>
+     <CMPNAME>VALIDATE_EVENT</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>Validates Sensorevent</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
