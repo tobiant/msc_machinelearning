@@ -31,6 +31,9 @@ private section.
   data G_SENSVAL1 type ZSENSVAL .
   data G_SENSVAL2 type ZSENSVAL .
   data G_LAST_ERR_PROBABILITY type ZERR_PROBABILITY .
+  data G_NOTIFICATION_THRESHOLD type ZERR_PROBABILITY value '0.6' ##NO_TEXT.
+
+  methods CREATE_NOTIFICATION .
 ENDCLASS.
 
 
@@ -84,12 +87,162 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD create_notification.
+
+    DATA:
+      gs_notif_type         TYPE bapi2080-notif_type,
+      gs_notifheader        TYPE bapi2080_nothdri,
+      gs_notifheader_export TYPE bapi2080_nothdre,
+      gt_notitem            TYPE TABLE OF bapi2080_notitemi, "WITH HEADER LINE,
+      gs_notitem            TYPE bapi2080_notitemi, "WITH HEADER LINE,
+      gs_notifcaus          TYPE bapi2080_notcausi, "WITH HEADER LINE,
+      gt_notifcaus          TYPE TABLE OF bapi2080_notcausi, "WITH HEADER LINE,
+      gs_longtexts          TYPE bapi2080_notfulltxti, "WITH HEADER LINE,
+      gt_longtexts          TYPE TABLE OF bapi2080_notfulltxti, "WITH HEADER LINE,
+      gt_return             TYPE TABLE OF bapiret2, "WITH HEADER LINE,
+      gs_return             TYPE bapiret2, "WITH HEADER LINE,
+      g_ind                 TYPE c,
+      gs_return_notifheader TYPE bapi2080_nothdre.
+
+    DATA(o_randomer) = cl_abap_random_int=>create( seed = CONV i( sy-uzeit )
+                                          min  = 1
+                                          max = 99 ).
+    DATA(random_int) = o_randomer->get_next( ).
+
+    DATA random_string TYPE string.
+    random_string = random_int.
+
+
+    DATA(arbpl) = 10000185.
+
+* Meldungstyp
+    gs_notif_type = 'M2'.
+
+* Kopfdaten
+    gs_notifheader = VALUE #(
+      funct_loc	  = '1000-001-AA-01'
+      short_text  = 'Generierte Meldung'
+      priority    = '1'
+      reportedby  = 'TGUBE'
+      code_group  = '$$OSS001'
+      coding      = '$$01'
+      pm_wkctr = arbpl   "Arbpl
+    ).
+
+
+
+
+* Positionen
+    gs_notitem-item_key = '0001'.
+    gs_notitem-item_sort_no = '0001'.
+    .
+    gs_notitem-dl_codegrp = 'PM1'. " parte objeto
+    gs_notitem-dl_code = '1'.
+
+
+    gs_notitem-descript = | Ausfallwahrscheinlichkeit { g_last_err_probability }% |.
+    INSERT gs_notitem INTO TABLE gt_notitem.
+
+*gt_notitem-item_key = '0002'.
+*gt_notitem-item_sort_no = '0002'.
+*gt_notitem-dl_codegrp = 'PM1'. " parte objeto
+*gt_notitem-dl_code = '2'.
+**gt_notitem-d_codegrp = 'S.LAVBOT'. " sint. averia
+**gt_notitem-d_codegrp = '0010'.
+*gt_notitem-descript = 'Ausnahme2 aufgetreten'.
+*
+*APPEND gt_notitem.
+
+* Position mit Meldungsgrund
+*gt_notifcaus-cause_key = '0002'.
+*gt_notifcaus-cause_sort_no = '0001'.
+*gt_notifcaus-item_key = '0002'.
+*gt_notifcaus-cause_codegrp = 'C.LAVBOT'.
+*gt_notifcaus-cause_code = '0010'.
+*gt_notifcaus-causetext = 'CAUSAS PRUEBA'.
+
+*APPEND gt_notifcaus.
+
+*texto de cabecera
+*gt_longtexts-objtype = 'QMEL'.
+*gt_longtexts-objkey = '0001'.
+*gt_longtexts-format_col = '*'.
+*gt_longtexts-text_line = 'Linea 1 Prueba de Texto'.
+
+*APPEND gt_longtexts.
+
+*texto de notificacion
+*gt_longtexts-objtype = 'QMFE'.
+*gt_longtexts-objkey = '0002'.
+*gt_longtexts-format_col = '*'.
+*gt_longtexts-text_line = 'Linea 1A Prueba de Texto'.
+
+*APPEND gt_longtexts.
+
+*texto de causa
+*gt_longtexts-objtype = 'QMUR'.
+*gt_longtexts-objkey = '0003'.
+*gt_longtexts-format_col = '*'.
+*gt_longtexts-text_line = 'Linea 1B Prueba de Texto'.
+
+*APPEND gt_longtexts.
+
+
+    CALL FUNCTION 'BAPI_ALM_NOTIF_CREATE'
+      EXPORTING
+        notif_type         = gs_notif_type
+        notifheader        = gs_notifheader
+      IMPORTING
+        notifheader_export = gs_notifheader_export
+      TABLES
+        notitem            = gt_notitem
+        notifcaus          = gt_notifcaus
+        longtexts          = gt_longtexts
+        return             = gt_return.
+
+    CHECK g_ind IS INITIAL.
+
+    CALL FUNCTION 'BAPI_ALM_NOTIF_SAVE'
+      EXPORTING
+        number      = gs_notifheader_export-notif_no
+      IMPORTING
+        notifheader = gs_return_notifheader
+      TABLES
+        return      = gt_return.
+
+    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+      IMPORTING
+        return = gs_return.
+
+    DATA lv_rfc_name TYPE tfdir-funcname.
+    DATA lv_destination TYPE rfcdest.
+    DATA lv_chan TYPE amc_channel_id.
+
+    lv_destination = 'IGSCLNT100'.
+    lv_chan = 'SMART1'.
+    CALL FUNCTION 'Z_MAINT_PUSHMSG' DESTINATION lv_destination
+      EXPORTING
+        i_type    = 'u'
+        i_channel = lv_chan.
+
+
+  ENDMETHOD.
+
+
   method GET_ERR_PROBABILITY.
     r_error_probability = g_last_err_probability.
   endmethod.
 
 
   METHOD notify_clients.
+
+
+
+
+
+
+
+
 
     DATA lv_rfc_name TYPE tfdir-funcname.
     DATA lv_destination TYPE rfcdest.
@@ -99,6 +252,7 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
     lv_chan = g_arbpl.
     CALL FUNCTION 'Z_MAINT_PUSHMSG' DESTINATION lv_destination
       EXPORTING
+        i_type            = 'v'
         i_channel         = lv_chan
         i_err_probability = g_last_err_probability
         i_value1          = g_sensval1
@@ -121,8 +275,13 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
             i_values = VALUE #( value1 = g_sensval1 value2 = g_sensval2 )
         ).
         DATA err TYPE p LENGTH 3 DECIMALS 2.
-        err = o_logreg->calc_y_hat(  ) * 100.
-        g_last_err_probability = err.
+        err = o_logreg->calc_y_hat(  ).
+        g_last_err_probability = err * 100.
+
+        IF err > g_notification_threshold.
+          create_notification( ).
+        ENDIF.
+
 
       CATCH zcx_maint INTO DATA(lo_err).
         RAISE EXCEPTION TYPE zcx_maint EXPORTING previous = lo_err.

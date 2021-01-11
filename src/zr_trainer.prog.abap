@@ -1,7 +1,7 @@
 *&---------------------------------------------------------------------*
 *& Report ZR_TRAINER
 *&---------------------------------------------------------------------*
-*&
+*& Evaluate
 *&---------------------------------------------------------------------*
 REPORT zr_trainer.
 
@@ -12,7 +12,7 @@ DATA(o_logreg) = NEW zcl_logreg(
   i_learning_rate = '0.001'
   i_weights       = VALUE #( value1 = 0 value2 = 0 )
   i_predictors    = 2
-  i_sample_size   = 1000
+  i_sample_size   = 700 "2/3 of dataset
 ).
 
 o_logreg->init( ).
@@ -22,6 +22,8 @@ DO o_logreg->get_iteration( ) TIMES.
   o_logreg->transpose( ).
   o_logreg->derivate( ).
 ENDDO.
+
+o_logreg->evaluate( ).
 
 "update sensordb with weights an biases
 DATA(arbpl) = o_logreg->get_arbpl(  ).

@@ -25,11 +25,11 @@ DATA(random_int) = o_randomer->get_next( ).
 DATA random_string TYPE string.
 random_string = random_int.
 
-IF random_int > 50.
-  DATA(arbpl) = '10000185'. "10000185 SMART1
-ELSE.
-  arbpl = '10000186'."*10000186 SMART2
-ENDIF.
+*IF random_int > 50.
+DATA(arbpl) = '10000185'. "10000185 SMART1
+*ELSE.
+*  arbpl = '10000186'."*10000186 SMART2
+*ENDIF.
 
 * Meldungstyp
 gs_notif_type = 'M2'.
@@ -37,7 +37,7 @@ gs_notif_type = 'M2'.
 * Kopfdaten
 gs_notifheader = VALUE #(
   funct_loc	  = '1000-001-AA-01'
-  short_text  = 'Meldung_' && random_string
+  short_text  = 'Störung_' && random_string
   priority    = '1'
 *  desstdate  = ''
 *  dessttime  = ''
@@ -71,15 +71,15 @@ gt_notitem-dl_code = '1'.
 gt_notitem-descript = 'Ausnahme1 aufgetreten'.
 APPEND gt_notitem.
 
-gt_notitem-item_key = '0002'.
-gt_notitem-item_sort_no = '0002'.
-gt_notitem-dl_codegrp = 'PM1'. " parte objeto
-gt_notitem-dl_code = '2'.
-*gt_notitem-d_codegrp = 'S.LAVBOT'. " sint. averia
-*gt_notitem-d_codegrp = '0010'.
-gt_notitem-descript = 'Ausnahme2 aufgetreten'.
-
-APPEND gt_notitem.
+*gt_notitem-item_key = '0002'.
+*gt_notitem-item_sort_no = '0002'.
+*gt_notitem-dl_codegrp = 'PM1'. " parte objeto
+*gt_notitem-dl_code = '2'.
+**gt_notitem-d_codegrp = 'S.LAVBOT'. " sint. averia
+**gt_notitem-d_codegrp = '0010'.
+*gt_notitem-descript = 'Ausnahme2 aufgetreten'.
+*
+*APPEND gt_notitem.
 
 * Position mit Meldungsgrund
 *gt_notifcaus-cause_key = '0002'.
@@ -152,3 +152,19 @@ CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
 *LOOP AT gt_return.
 *  WRITE: gt_return-message.
 *ENDLOOP.
+
+
+DATA lv_rfc_name TYPE tfdir-funcname.
+DATA lv_destination TYPE rfcdest.
+DATA lv_chan TYPE amc_channel_id.
+
+lv_destination = 'IGSCLNT100'.
+lv_chan = 'SMART1'.
+CALL FUNCTION 'Z_MAINT_PUSHMSG' DESTINATION lv_destination
+  EXPORTING
+    i_type            = 'u'
+    i_channel         = lv_chan
+*    i_err_probability = g_last_err_probability
+*    i_value1          = 0
+*    i_value2          = 0.
+.

@@ -36,6 +36,24 @@
      <ENTRY>m2=note</ENTRY>
      <LENGTH>132</LENGTH>
     </item>
+    <item>
+     <ID>I</ID>
+     <KEY>005</KEY>
+     <ENTRY>Bezeichnung</ENTRY>
+     <LENGTH>132</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>006</KEY>
+     <ENTRY>Sprache</ENTRY>
+     <LENGTH>132</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>007</KEY>
+     <ENTRY>Material</ENTRY>
+     <LENGTH>132</LENGTH>
+    </item>
    </TPOOL>
    <DESCRIPTIONS>
     <SEOCOMPOTX>
@@ -121,6 +139,12 @@
      <CMPNAME>DEFINE_SENSOR1</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>DEFINE_SENSOR1</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_Z_MAINTENANCE_MPC</CLSNAME>
+     <CMPNAME>DEFINE_UISSMATNR</CMPNAME>
+     <LANGU>D</LANGU>
+     <DESCRIPT>DEFINE_UISSMATNR</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_Z_MAINTENANCE_MPC</CLSNAME>

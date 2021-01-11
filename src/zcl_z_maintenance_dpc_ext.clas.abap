@@ -75,15 +75,26 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
                 return   = lt_return.
             COMMIT WORK.
 
-          WHEN OTHERS.
+          WHEN OTHERS. "Auftrag fertigmelden
 
-*        DATA(lv_state) = lv_function_parameters[ name = 'STATE' ]-value.
+            DATA: ls_header TYPE bapi_alm_order_headers_i,
+                  lt_header TYPE TABLE OF bapi_alm_order_headers_i.
             DATA: lv_aufnr TYPE aufnr.
             DATA(lv_aufnr_val) = lv_function_parameters[ name = 'AUFNR' ]-value.
             lv_aufnr = |{ lv_aufnr_val ALPHA = IN }|.
+*            lv_aufnr = '00000' && lv_function_parameters[ name = 'AUFNR' ]-value.
 
             DATA(ls_method) = VALUE bapi_alm_order_method( ).
             DATA lt_methods TYPE TABLE OF bapi_alm_order_method.
+
+            ls_method = VALUE #(
+              refnumber = 1
+              objectkey = lv_aufnr
+              objecttype = 'SRULE'
+              method = 'CREATE'
+            ).
+            APPEND ls_method TO lt_methods.
+
             ls_method = VALUE #(
               refnumber = 1
               objectkey = lv_aufnr
@@ -91,6 +102,7 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
               method = 'TECHNICALCOMPLETE'
             ).
             APPEND ls_method TO lt_methods.
+
             ls_method = VALUE #(
             refnumber = 1
             objectkey = space
@@ -98,28 +110,64 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
             method = 'SAVE'
             ).
             APPEND ls_method TO lt_methods.
+
+            ls_header = VALUE #(
+              orderid    = lv_aufnr
+            ).
+
+            APPEND ls_header TO lt_header.
+
+**            Abrechnungsregel
+            DATA ls_srule TYPE bapi_alm_order_srule.
+            DATA lt_srule TYPE TABLE OF bapi_alm_order_srule.
+
+            ls_srule = VALUE #(
+            percentage = '100'
+            source = 'PSP'
+             objnr = 'OR' && lv_aufnr
+             settl_type = 'PER'
+             wbs_element = 'A01'
+            ).
+
+            INSERT ls_srule INTO TABLE lt_srule.
+
             CALL FUNCTION 'BAPI_ALM_ORDER_MAINTAIN'
               TABLES
+                it_header  = lt_header
+                it_srule   = lt_srule
                 it_methods = lt_methods
                 return     = lt_return.
+            COMMIT WORK.
+
         ENDCASE.
 
         me->copy_data_to_ref( EXPORTING is_data = lt_return
                               CHANGING cr_data = er_data ).
 
+        DATA lv_rfc_name TYPE tfdir-funcname.
+        DATA lv_destination TYPE rfcdest.
+        DATA lv_chan TYPE amc_channel_id.
+        lv_destination = 'IGSCLNT100'.
+        lv_chan = 'SMART1'.
+        CALL FUNCTION 'Z_MAINT_PUSHMSG' DESTINATION lv_destination
+          EXPORTING
+            i_type    = 'u'
+            i_channel = lv_chan.
+
       WHEN 'createOrder'.
 
-        DATA: ls_header    TYPE bapi_alm_order_headers_i,
-              lt_header    TYPE TABLE OF bapi_alm_order_headers_i,
-              ls_header_up TYPE bapi_alm_order_headers_up,
-              lt_header_up TYPE TABLE OF bapi_alm_order_headers_up,
-              ls_operation TYPE bapi_alm_order_operation,
-              lt_operation TYPE TABLE OF bapi_alm_order_operation,
-              lt_numbers   TYPE TABLE OF bapi_alm_numbers.
+        DATA: "ls_header    TYPE bapi_alm_order_headers_i,
+          "lt_header    TYPE TABLE OF bapi_alm_order_headers_i,
+          ls_header_up TYPE bapi_alm_order_headers_up,
+          lt_header_up TYPE TABLE OF bapi_alm_order_headers_up,
+          ls_operation TYPE bapi_alm_order_operation,
+          lt_operation TYPE TABLE OF bapi_alm_order_operation,
+          lt_numbers   TYPE TABLE OF bapi_alm_numbers.
 
         lv_function_parameters = io_tech_request_context->get_parameters( ).
         DATA lv_notif_nr(12) TYPE c.
-        lv_notif_nr = lv_function_parameters[ name = 'NOTIF_NO' ]-value.
+        lv_notif_nr = lv_function_parameters[ name = 'ID' ]-value.
+
 
         CLEAR ls_method.
         CLEAR lt_methods.
@@ -131,7 +179,7 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
           refnumber   = '000001'
           objecttype  = 'HEADER'
           method      = 'CREATETONOTIF'
-          objectkey   = '%00000000001' && lv_notif_nr
+          objectkey   = '%000000000010000' && lv_notif_nr
         ).
         APPEND ls_method TO lt_methods.
 
@@ -173,7 +221,7 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
           work_cntr   = 'SMART1'
           calc_key    = '1'
           control_key = 'PM02'
-          description = 'TEST NERO'
+          description = 'TEST'
         ).
         APPEND ls_operation TO lt_operation.
 
@@ -185,9 +233,11 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
             it_operation = lt_operation
             return       = lt_return
             et_numbers   = lt_numbers.
-
+*
         me->copy_data_to_ref( EXPORTING is_data = lt_return
                                       CHANGING cr_data = er_data ).
+
+
 
         IF NOT line_exists( lt_return[ type = 'E' ] ).
           CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
@@ -196,6 +246,73 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
         ELSE.
           ROLLBACK WORK.
         ENDIF.
+**********************************************************************
+        "meldung abschließen
+        DATA: lv_qmel2 TYPE bapi2080_nothdre-notif_no.
+        lv_qmel2 = |{ lv_notif_nr ALPHA = IN }|.
+        DATA ls_status2 TYPE bapi2080_notsti.
+
+        ls_status2 = VALUE #(
+                            langu = sy-langu
+                            languiso = sy-langu
+                            refdate = sy-datum
+                            reftime = sy-uzeit
+                            ).
+
+
+        CALL FUNCTION 'BAPI_ALM_NOTIF_CLOSE'
+          EXPORTING
+            number   = lv_qmel2
+            syststat = ls_status2
+          TABLES
+            return   = lt_return.
+        COMMIT WORK.
+
+**********************************************************************
+        "neuen Auftrag freigeben
+
+        TRY .
+            DATA(aufnr) = lt_numbers[ 1 ]-aufnr_new.
+
+            CLEAR: lt_methods, lt_header.
+            ls_method = VALUE #(
+              refnumber = 1
+              objectkey = aufnr
+              objecttype = 'HEADER'
+              method = 'RELEASE'
+            ).
+            APPEND ls_method TO lt_methods.
+
+            ls_method = VALUE #(
+            refnumber = 1
+            objectkey = space
+            objecttype = space
+            method = 'SAVE'
+            ).
+            APPEND ls_method TO lt_methods.
+
+
+            ls_header = VALUE #(
+              orderid    = aufnr
+            ).
+
+            APPEND ls_header TO lt_header.
+
+            CALL FUNCTION 'BAPI_ALM_ORDER_MAINTAIN'
+              TABLES
+                it_header  = lt_header
+                it_methods = lt_methods
+                return     = lt_return.
+
+            CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
+              EXPORTING
+                wait = 'X'.
+
+          CATCH cx_root.
+
+        ENDTRY.
+
+
 
 
       WHEN OTHERS.
@@ -249,10 +366,11 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
           INNER JOIN iloa ON iloa~iloan EQ afih~iloan
           WHERE aufk~auart EQ 'PM02'
           AND aufk~aufnr EQ @lv_aufnr
-          AND jest~chgnr = ( SELECT MAX( chgnr ) FROM jest AS jest2 WHERE jest2~objnr = jest~objnr AND jest2~stat = jest~stat )
+*          AND jest~chgnr = ( SELECT MAX( chgnr ) FROM jest AS jest2 WHERE jest2~objnr = jest~objnr AND jest2~stat = jest~stat )
           AND jest~inact = ''
           AND jest~stat EQ 'I0002'
           INTO @DATA(ls_order).
+
 
       MOVE-CORRESPONDING ls_order TO er_entity.
     ENDIF.
@@ -352,24 +470,28 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
           INNER JOIN iloa ON iloa~iloan EQ qmih~iloan
           INNER JOIN crhd ON crhd~objid EQ qmel~arbpl
           WHERE qmart EQ 'M2'
+          and qmel~qmnum ne '000010000099'
+          and qmel~qmnum ne '000010000098'
           AND NOT EXISTS ( SELECT * FROM jest WHERE objnr = qmel~objnr AND stat EQ 'I0072' AND inact = @space ) "keine technisch abgeschlossen Aufträge lesen (TABG)
           ORDER BY id DESCENDING
           INTO TABLE @DATA(lt_mel).
 
-
-
 *qmfe~FENUM
 
         SELECT
-          afko~*,
-          aufk~ktext,
-          aufk~vaplz,
-          aufk~idat1
+          afko~aufnr AS id,
+          aufk~ktext AS txt,
+          aufk~vaplz AS arbpl,
+          aufk~idat1 AS date,
+          aufk~auart AS type,
+          tplnr
           FROM aufk
           INNER JOIN jest ON jest~objnr EQ aufk~objnr
           INNER JOIN afko ON afko~aufnr EQ aufk~aufnr
+          INNER JOIN afih ON afih~aufnr EQ aufk~aufnr
+          INNER JOIN iloa ON iloa~iloan EQ afih~iloan
           WHERE aufk~auart EQ 'PM02'
-          AND jest~chgnr = ( SELECT MAX( chgnr ) FROM jest AS jest2 WHERE jest2~objnr = jest~objnr AND jest2~stat = jest~stat )
+*          AND jest~chgnr = ( SELECT MAX( chgnr ) FROM jest AS jest2 WHERE jest2~objnr = jest~objnr AND jest2~stat = jest~stat )
           AND jest~inact = ''
           AND jest~stat EQ 'I0002'
           INTO TABLE @DATA(lt_data).
@@ -381,30 +503,15 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
 
         LOOP AT lt_data INTO DATA(ls_data).
           CLEAR ls_entityset.
-*          data ls_entityset type ZCL_Z_MAINTENANCE_MPC=>TT_ORDERHEAD.
-          ls_entityset-id = ls_data-afko-aufnr.
-          ls_entityset-arbpl = ls_data-vaplz.
-          ls_entityset-txt = ls_data-ktext.
-          ls_entityset-date = ls_data-idat1.
+          ls_entityset-id = ls_data-id.
+          ls_entityset-arbpl = ls_data-arbpl.
+          ls_entityset-txt = ls_data-txt.
+          ls_entityset-date = ls_data-date.
           ls_entityset-type = 'PM02'.
+          ls_entityset-tplnr = ls_data-tplnr.
           APPEND ls_entityset TO et_entityset.
         ENDLOOP.
 
-        MOVE-CORRESPONDING lt_data TO et_entityset.
-
-*        LOOP AT lt_data REFERENCE INTO DATA(r_data).
-*          ls_entityset = CORRESPONDING #( r_data->* ).
-*          INSERT ls_entityset INTO TABLE et_entityset.
-*        ENDLOOP.
-
-*        into table @data(lt_entityset).
-*        MOVE-CORRESPONDING lt_entityset TO et_entityset.
-*        LOOP AT lt_aufk INTO DATA(ls_aufk).
-*          SELECT SINGLE * FROM afko
-*            WHERE aufnr = @ls_aufk-aufnr
-*            INTO @DATA(ls_afko).
-*          APPEND ls_afko TO et_entityset.
-*        ENDLOOP.
 
       CATCH cx_root.
     ENDTRY.

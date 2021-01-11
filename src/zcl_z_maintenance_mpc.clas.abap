@@ -29,13 +29,13 @@ public section.
     end of TS_SETSENSORDATA .
   types:
     begin of TS_SETSTATE,
+        TYPE type string,
         AUFNR type string,
         STATE type string,
-        TYPE type string,
     end of TS_SETSTATE .
   types:
     begin of TS_CREATEORDER,
-        NOTIF_NO type string,
+        ID type string,
     end of TS_CREATEORDER .
   types:
   begin of TS_ORDERPOS,
@@ -92,6 +92,14 @@ TT_SENSOR1 type standard table of TS_SENSOR1 .
   end of TS_ORDERMAT .
   types:
 TT_ORDERMAT type standard table of TS_ORDERMAT .
+  types:
+  begin of TS_UISSMATNR,
+     MAKTG type MAKTG,
+     SPRAS type SPRAS,
+     MATNR type MATNR,
+  end of TS_UISSMATNR .
+  types:
+TT_UISSMATNR type standard table of TS_UISSMATNR .
 
   constants GC_ORDERHEAD type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'OrderHead' ##NO_TEXT.
   constants GC_ORDERMAT type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'OrderMat' ##NO_TEXT.
@@ -99,6 +107,7 @@ TT_ORDERMAT type standard table of TS_ORDERMAT .
   constants GC_RETURN type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'return' ##NO_TEXT.
   constants GC_SENSOR1 type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'Sensor1' ##NO_TEXT.
   constants GC_SENSORRETURN type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'sensorReturn' ##NO_TEXT.
+  constants GC_UISSMATNR type /IWBEP/IF_MGW_MED_ODATA_TYPES=>TY_E_MED_ENTITY_NAME value 'UissMatnr' ##NO_TEXT.
 
   methods LOAD_TEXT_ELEMENTS
   final
@@ -131,6 +140,9 @@ private section.
   methods DEFINE_ORDERMAT
     raising
       /IWBEP/CX_MGW_MED_EXCEPTION .
+  methods DEFINE_UISSMATNR
+    raising
+      /IWBEP/CX_MGW_MED_EXCEPTION .
   methods DEFINE_ASSOCIATIONS
     raising
       /IWBEP/CX_MGW_MED_EXCEPTION .
@@ -160,6 +172,7 @@ define_orderpos( ).
 define_orderhead( ).
 define_sensor1( ).
 define_ordermat( ).
+define_uissmatnr( ).
 define_associations( ).
 define_actions( ).
   endmethod.
@@ -216,11 +229,11 @@ lo_action->set_return_multiplicity( 'M' ). "#EC NOTEXT
 * Parameters
 ***********************************************************************************************************************************
 
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'type'    iv_abap_fieldname = 'TYPE' ). "#EC NOTEXT
+lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'aufnr'    iv_abap_fieldname = 'AUFNR' ). "#EC NOTEXT
 lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'state'    iv_abap_fieldname = 'STATE' ). "#EC NOTEXT
-lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
-lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'type'    iv_abap_fieldname = 'TYPE' ). "#EC NOTEXT
 lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_action->bind_input_structure( iv_structure_name  = 'ZCL_Z_MAINTENANCE_MPC=>TS_SETSTATE' ). "#EC NOTEXT
 ***********************************************************************************************************************************
@@ -238,7 +251,7 @@ lo_action->set_return_multiplicity( 'M' ). "#EC NOTEXT
 * Parameters
 ***********************************************************************************************************************************
 
-lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'notif_no'    iv_abap_fieldname = 'NOTIF_NO' ). "#EC NOTEXT
+lo_parameter = lo_action->create_input_parameter( iv_parameter_name = 'id'    iv_abap_fieldname = 'ID' ). "#EC NOTEXT
 lo_parameter->/iwbep/if_mgw_odata_property~set_type_edm_string( ).
 lo_action->bind_input_structure( iv_structure_name  = 'ZCL_Z_MAINTENANCE_MPC=>TS_CREATEORDER' ). "#EC NOTEXT
   endmethod.
@@ -1058,6 +1071,97 @@ lo_entity_set->set_filter_required( abap_false ).
   endmethod.
 
 
+  method DEFINE_UISSMATNR.
+*&---------------------------------------------------------------------*
+*&           Generated code for the MODEL PROVIDER BASE CLASS         &*
+*&                                                                     &*
+*&  !!!NEVER MODIFY THIS CLASS. IN CASE YOU WANT TO CHANGE THE MODEL  &*
+*&        DO THIS IN THE MODEL PROVIDER SUBCLASS!!!                   &*
+*&                                                                     &*
+*&---------------------------------------------------------------------*
+
+
+  data:
+        lo_annotation     type ref to /iwbep/if_mgw_odata_annotation,                "#EC NEEDED
+        lo_entity_type    type ref to /iwbep/if_mgw_odata_entity_typ,                "#EC NEEDED
+        lo_complex_type   type ref to /iwbep/if_mgw_odata_cmplx_type,                "#EC NEEDED
+        lo_property       type ref to /iwbep/if_mgw_odata_property,                  "#EC NEEDED
+        lo_entity_set     type ref to /iwbep/if_mgw_odata_entity_set.                "#EC NEEDED
+
+***********************************************************************************************************************************
+*   ENTITY - UissMatnr
+***********************************************************************************************************************************
+
+lo_entity_type = model->create_entity_type( iv_entity_type_name = 'UissMatnr' iv_def_entity_set = abap_false ). "#EC NOTEXT
+
+***********************************************************************************************************************************
+*Properties
+***********************************************************************************************************************************
+
+lo_property = lo_entity_type->create_property( iv_property_name = 'Maktg' iv_abap_fieldname = 'MAKTG' ). "#EC NOTEXT
+lo_property->set_label_from_text_element( iv_text_element_symbol = '005' iv_text_element_container = gc_incl_name ).  "#EC NOTEXT
+lo_property->set_is_key( ).
+lo_property->set_type_edm_string( ).
+lo_property->set_maxlength( iv_max_length = 40 ). "#EC NOTEXT
+lo_property->set_creatable( abap_false ).
+lo_property->set_updatable( abap_false ).
+lo_property->set_sortable( abap_false ).
+lo_property->set_nullable( abap_false ).
+lo_property->set_filterable( abap_false ).
+lo_property->/iwbep/if_mgw_odata_annotatabl~create_annotation( 'sap' )->add(
+      EXPORTING
+        iv_key      = 'unicode'
+        iv_value    = 'false' ).
+lo_property = lo_entity_type->create_property( iv_property_name = 'Spras' iv_abap_fieldname = 'SPRAS' ). "#EC NOTEXT
+lo_property->set_label_from_text_element( iv_text_element_symbol = '006' iv_text_element_container = gc_incl_name ).  "#EC NOTEXT
+lo_property->set_type_edm_string( ).
+lo_property->set_maxlength( iv_max_length = 2 ). "#EC NOTEXT
+lo_property->set_conversion_exit( 'ISOLA' ). "#EC NOTEXT
+lo_property->set_creatable( abap_false ).
+lo_property->set_updatable( abap_false ).
+lo_property->set_sortable( abap_false ).
+lo_property->set_nullable( abap_false ).
+lo_property->set_filterable( abap_false ).
+lo_property->/iwbep/if_mgw_odata_annotatabl~create_annotation( 'sap' )->add(
+      EXPORTING
+        iv_key      = 'unicode'
+        iv_value    = 'false' ).
+lo_property = lo_entity_type->create_property( iv_property_name = 'Matnr' iv_abap_fieldname = 'MATNR' ). "#EC NOTEXT
+lo_property->set_label_from_text_element( iv_text_element_symbol = '007' iv_text_element_container = gc_incl_name ).  "#EC NOTEXT
+lo_property->set_is_key( ).
+lo_property->set_type_edm_string( ).
+lo_property->set_maxlength( iv_max_length = 18 ). "#EC NOTEXT
+lo_property->set_conversion_exit( 'MATN1' ). "#EC NOTEXT
+lo_property->set_creatable( abap_false ).
+lo_property->set_updatable( abap_false ).
+lo_property->set_sortable( abap_false ).
+lo_property->set_nullable( abap_false ).
+lo_property->set_filterable( abap_false ).
+lo_property->/iwbep/if_mgw_odata_annotatabl~create_annotation( 'sap' )->add(
+      EXPORTING
+        iv_key      = 'unicode'
+        iv_value    = 'false' ).
+
+lo_entity_type->bind_structure( iv_structure_name  = 'ZCL_Z_MAINTENANCE_MPC=>TS_UISSMATNR' ). "#EC NOTEXT
+
+
+***********************************************************************************************************************************
+*   ENTITY SETS
+***********************************************************************************************************************************
+lo_entity_set = lo_entity_type->create_entity_set( 'UissMatnrSet' ). "#EC NOTEXT
+
+lo_entity_set->set_creatable( abap_false ).
+lo_entity_set->set_updatable( abap_false ).
+lo_entity_set->set_deletable( abap_false ).
+
+lo_entity_set->set_pageable( abap_false ).
+lo_entity_set->set_addressable( abap_true ).
+lo_entity_set->set_has_ftxt_search( abap_false ).
+lo_entity_set->set_subscribable( abap_false ).
+lo_entity_set->set_filter_required( abap_false ).
+  endmethod.
+
+
   method GET_LAST_MODIFIED.
 *&---------------------------------------------------------------------*
 *&           Generated code for the MODEL PROVIDER BASE CLASS         &*
@@ -1068,7 +1172,7 @@ lo_entity_set->set_filter_required( abap_false ).
 *&---------------------------------------------------------------------*
 
 
-  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20201212161334'.                  "#EC NOTEXT
+  CONSTANTS: lc_gen_date_time TYPE timestamp VALUE '20210111104914'.                  "#EC NOTEXT
   rv_last_modified = super->get_last_modified( ).
   IF rv_last_modified LT lc_gen_date_time.
     rv_last_modified = lc_gen_date_time.
@@ -1118,6 +1222,29 @@ ls_text_element-artifact_type          = 'PROP'.                                
 ls_text_element-parent_artifact_name   = 'OrderHead'.                            "#EC NOTEXT
 ls_text_element-parent_artifact_type   = 'ETYP'.                                       "#EC NOTEXT
 ls_text_element-text_symbol            = '004'.              "#EC NOTEXT
+APPEND ls_text_element TO rt_text_elements.
+
+
+clear ls_text_element.
+ls_text_element-artifact_name          = 'Maktg'.                 "#EC NOTEXT
+ls_text_element-artifact_type          = 'PROP'.                                       "#EC NOTEXT
+ls_text_element-parent_artifact_name   = 'UissMatnr'.                            "#EC NOTEXT
+ls_text_element-parent_artifact_type   = 'ETYP'.                                       "#EC NOTEXT
+ls_text_element-text_symbol            = '005'.              "#EC NOTEXT
+APPEND ls_text_element TO rt_text_elements.
+clear ls_text_element.
+ls_text_element-artifact_name          = 'Spras'.                 "#EC NOTEXT
+ls_text_element-artifact_type          = 'PROP'.                                       "#EC NOTEXT
+ls_text_element-parent_artifact_name   = 'UissMatnr'.                            "#EC NOTEXT
+ls_text_element-parent_artifact_type   = 'ETYP'.                                       "#EC NOTEXT
+ls_text_element-text_symbol            = '006'.              "#EC NOTEXT
+APPEND ls_text_element TO rt_text_elements.
+clear ls_text_element.
+ls_text_element-artifact_name          = 'Matnr'.                 "#EC NOTEXT
+ls_text_element-artifact_type          = 'PROP'.                                       "#EC NOTEXT
+ls_text_element-parent_artifact_name   = 'UissMatnr'.                            "#EC NOTEXT
+ls_text_element-parent_artifact_type   = 'ETYP'.                                       "#EC NOTEXT
+ls_text_element-text_symbol            = '007'.              "#EC NOTEXT
 APPEND ls_text_element TO rt_text_elements.
   endmethod.
 ENDCLASS.

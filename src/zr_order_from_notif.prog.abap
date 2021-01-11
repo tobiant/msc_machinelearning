@@ -16,7 +16,7 @@ DATA: it_return       TYPE TABLE OF  bapiret2 WITH HEADER LINE,
       ls_operation    TYPE bapi_alm_order_operation,
       lt_operation    TYPE TABLE OF bapi_alm_order_operation,
       lt_numbers      TYPE TABLE OF bapi_alm_numbers,
-      lv_notif_nr(12) TYPE c VALUE '000010000093'.
+      lv_notif_nr(12) TYPE c VALUE '000010000105'.
 
 ls_methods = VALUE #(
   refnumber   = '000001'

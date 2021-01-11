@@ -7,11 +7,13 @@ public section.
 
   types:
     BEGIN OF str_sample,
-        value1      TYPE decfloat34,
-        value2      TYPE decfloat34,
-        y           TYPE decfloat34,
-        y_hat       TYPE decfloat34,
-        dot_product TYPE decfloat34,
+        id              TYPE zlogid,
+        value1          TYPE decfloat34,
+        value2          TYPE decfloat34,
+        y               TYPE decfloat34,
+        y_hat           TYPE decfloat34,
+        dot_product     TYPE decfloat34,
+        predicted_class TYPE i,
       END OF str_sample .
   types:
     BEGIN OF str_s_w,
@@ -19,6 +21,13 @@ public section.
         value2 TYPE decfloat34,
       END OF str_s_w .
   types TT_SAMPLE type ref to DATA .
+  types:
+    BEGIN OF str_confusion,
+        ist  TYPE i,
+        ist2 TYPE i,
+      END OF str_confusion .
+  types:
+    tt_confusion type STANDARD TABLE OF str_confusion .
 
   methods CONSTRUCTOR
     importing
@@ -69,10 +78,13 @@ public section.
       value(R_Y_HAT) type DECFLOAT34 .
   methods GET_S_W
     returning
-      value(R_RESULT) type STR_SAMPLE .
+      value(R_RESULT) type STR_S_W .
   methods SET_S_W
     importing
-      !I_S_W type STR_SAMPLE .
+      !I_S_W type STR_S_W .
+  methods EVALUATE
+    returning
+      value(RT_CONFUSION) type STR_CONFUSION .
   PROTECTED SECTION.
 private section.
 
@@ -87,11 +99,13 @@ private section.
   data SAMPLESIZE type I value 1000 ##NO_TEXT.
   data NO_OF_PREDICTORS type I .
   data DERIVATION_W type DECFLOAT34 .
-    data S_WEIGHTS type STR_S_W .
+  data S_WEIGHTS type STR_S_W .
   data:
     t_sample TYPE STANDARD TABLE OF ztsensorlog .
   data:
     t_trimmed_sample TYPE STANDARD TABLE OF str_sample .
+  data:
+    T_EVALUATION TYPE STANDARD TABLE OF str_sample .
 ENDCLASS.
 
 
@@ -146,6 +160,7 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
 
 
   METHOD derivate.
+
     FIELD-SYMBOLS: <field_line_1> TYPE any.
     FIELD-SYMBOLS: <field_line_2> TYPE any.
     FIELD-SYMBOLS: <field_line_3> TYPE any.
@@ -185,6 +200,70 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
     me->s_weights-value2 = me->s_weights-value2 - ( learning_rate * pre_w2 ).
     me->bias = me->bias - ( learning_rate * new_bias ).
 
+
+
+
+  ENDMETHOD.
+
+
+  METHOD evaluate.
+
+
+
+    DATA ls_confusion TYPE str_confusion.
+    DATA lt_confusion TYPE STANDARD TABLE OF str_confusion.
+    DATA ls_evaluation TYPE str_sample.
+    CLEAR t_trimmed_sample.
+
+    MOVE-CORRESPONDING t_evaluation TO t_trimmed_sample.
+    me->calc_y_hat( ).
+
+    DATA(threshold) = CONV decfloat34('0.7').
+
+    LOOP AT t_trimmed_sample REFERENCE INTO DATA(r_eval).
+      IF r_eval->y_hat >= threshold.
+        r_eval->predicted_class = 1.
+      ELSE.
+        r_eval->predicted_class = 0.
+      ENDIF.
+    ENDLOOP.
+
+    DATA false_neg TYPE i.
+    DATA false_pos TYPE i.
+    DATA true_neg TYPE i.
+    DATA true_pos TYPE i.
+
+
+    LOOP AT t_trimmed_sample REFERENCE INTO DATA(r_trimmed).
+      CASE r_trimmed->y.
+        WHEN 1.
+          IF r_trimmed->predicted_class = 1.
+            ADD 1 TO true_pos.
+          ELSE.
+            ADD 1 TO false_neg.
+          ENDIF.
+        WHEN 0.
+          IF r_trimmed->predicted_class = 1.
+            ADD 1 TO false_pos.
+          ELSE.
+            ADD 1 TO true_neg.
+          ENDIF.
+      ENDCASE.
+    ENDLOOP.
+
+    ls_confusion = VALUE #(
+      ist  = true_pos
+      ist2 = false_neg
+    ).
+    INSERT ls_confusion INTO TABLE lt_confusion.
+
+    ls_confusion = VALUE #(
+      ist  = false_pos
+      ist2 = true_neg
+    ).
+    INSERT ls_confusion INTO TABLE lt_confusion.
+
+*    rt_confusion = lt_confusion.
   ENDMETHOD.
 
 
@@ -220,23 +299,54 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
 
   METHOD init.
     DATA ls_sample TYPE str_sample.
+    DATA index_no TYPE i.
 
-    IF i_values IS SUPPLIED.
-      ls_sample = i_values.
+    IF i_values IS SUPPLIED. "get value for a single line
+      MOVE-CORRESPONDING i_values TO ls_sample.
       INSERT ls_sample INTO TABLE t_trimmed_sample.
+
     ELSE.
-      SELECT * FROM ztsensorlog INTO TABLE t_sample
-      UP TO samplesize ROWS
+      SELECT * FROM ztsensorlog INTO TABLE t_sample "for training and evaluation
       WHERE sensorid EQ me->arbpl.
 
-      LOOP AT t_sample REFERENCE INTO DATA(r_sample).
+      DESCRIBE TABLE t_sample LINES DATA(lines).
+
+      DATA(o_randomer) = cl_abap_random_int=>create(
+                                             seed = 42
+                                             min  = 1
+                                             max = lines
+                                         ).
+
+      DO samplesize TIMES.
+        index_no = o_randomer->get_next( ).
+        READ TABLE t_sample REFERENCE INTO DATA(r_sample) INDEX index_no.
+        IF sy-subrc NE 0.
+          READ TABLE t_sample REFERENCE INTO r_sample INDEX 1.
+        ENDIF.
         ls_sample = VALUE #(
           value1 = r_sample->value1
           value2 = r_sample->value2
           y = r_sample->error
         ).
         INSERT ls_sample INTO TABLE t_trimmed_sample.
+        DELETE t_sample WHERE id EQ r_sample->id.
+      ENDDO.
+
+
+      "for later Evaluation
+      CLEAR ls_sample.
+      LOOP AT t_sample REFERENCE INTO r_sample.
+        ls_sample = VALUE #(
+          id = r_sample->id
+          value1 = r_sample->value1
+          value2 = r_sample->value2
+          y = r_sample->error
+        ).
+        INSERT ls_sample INTO TABLE t_evaluation.
       ENDLOOP.
+
+
+
     ENDIF.
 
 
