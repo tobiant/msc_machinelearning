@@ -221,7 +221,7 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
           work_cntr   = 'SMART1'
           calc_key    = '1'
           control_key = 'PM02'
-          description = 'TEST'
+          description = 'Maschine warten'
         ).
         APPEND ls_operation TO lt_operation.
 
@@ -307,6 +307,14 @@ CLASS ZCL_Z_MAINTENANCE_DPC_EXT IMPLEMENTATION.
             CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
               EXPORTING
                 wait = 'X'.
+
+
+            lv_destination = 'IGSCLNT100'.
+            lv_chan = 'SMART1'.
+            CALL FUNCTION 'Z_MAINT_PUSHMSG' DESTINATION lv_destination
+              EXPORTING
+                i_type    = 'u'
+                i_channel = lv_chan.
 
           CATCH cx_root.
 

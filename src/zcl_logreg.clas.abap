@@ -119,11 +119,19 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
     DATA r_arithmetic_error TYPE REF TO cx_sy_arithmetic_error.
 
     TRY.
+
         LOOP AT t_trimmed_sample REFERENCE INTO DATA(r_sample).
-          r_sample->dot_product = r_sample->value1 * s_weights-value1 +  r_sample->value2 * s_weights-value2.
-          r_sample->y_hat = 1 / ( 1 + exp( ( ( -1 ) * r_sample->dot_product + bias ) ) ).
+
+          r_sample->dot_product = r_sample->value1 * s_weights-value1 + "skalarprodukt des prädiktorvektors
+                                  r_sample->value2 * s_weights-value2. "und der geschätzten coeffizienten
+
+          r_sample->y_hat = 1 / ( 1 + exp( ( ( -1 ) * r_sample->dot_product + bias ) ) ). "logistische Funktion
+
+          "nur für die rückgabe bei einzelnen Sensorwerten
           r_y_hat = r_sample->y_hat.
+
         ENDLOOP.
+
       CATCH cx_sy_arithmetic_error INTO r_arithmetic_error.
         DATA(error) = r_arithmetic_error->get_text( ).
         MESSAGE error TYPE 'E'.
@@ -183,8 +191,8 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
       ASSIGN COMPONENT column OF STRUCTURE <table>[ 3 ] TO <field_line_3>. "y
       ASSIGN COMPONENT column OF STRUCTURE <table>[ 4 ] TO <field_line_4>. "y_hat
 
-      sum_y = sum_y + <field_line_3>.
-      sum_y_hat = sum_y_hat + <field_line_4>.
+      sum_y = sum_y + <field_line_3>."y: beobachtetes outcome
+      sum_y_hat = sum_y_hat + <field_line_4>.""y_hat: geschätztes outcome
 
       sum1 = sum1 + ( <field_line_1> * ( <field_line_4> - <field_line_3> ) ).
       sum2 = sum2 + ( <field_line_2> * ( <field_line_4> - <field_line_3> ) ).
@@ -218,7 +226,7 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
     MOVE-CORRESPONDING t_evaluation TO t_trimmed_sample.
     me->calc_y_hat( ).
 
-    DATA(threshold) = CONV decfloat34('0.7').
+    DATA(threshold) = CONV decfloat34('0.5').
 
     LOOP AT t_trimmed_sample REFERENCE INTO DATA(r_eval).
       IF r_eval->y_hat >= threshold.
@@ -263,6 +271,19 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
     ).
     INSERT ls_confusion INTO TABLE lt_confusion.
 
+    DATA:
+           accuracy TYPE decfloat34
+           , precision TYPE decfloat34
+           , recall TYPE decfloat34
+           , f1 TYPE decfloat34
+           .
+    accuracy = ( true_pos + true_neg ) / ( true_pos + true_neg +  false_pos + false_neg ).
+    precision = ( true_pos ) / ( true_pos + false_pos ).
+    recall = ( true_pos ) / ( true_pos + false_neg ).
+
+    f1 = 2 * ( ( precision * recall ) / ( precision + recall ) ).
+
+
 *    rt_confusion = lt_confusion.
   ENDMETHOD.
 
@@ -304,10 +325,11 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
     IF i_values IS SUPPLIED. "get value for a single line
       MOVE-CORRESPONDING i_values TO ls_sample.
       INSERT ls_sample INTO TABLE t_trimmed_sample.
-
     ELSE.
+
       SELECT * FROM ztsensorlog INTO TABLE t_sample "for training and evaluation
       WHERE sensorid EQ me->arbpl.
+
 
       DESCRIBE TABLE t_sample LINES DATA(lines).
 
@@ -317,19 +339,26 @@ CLASS ZCL_LOGREG IMPLEMENTATION.
                                              max = lines
                                          ).
 
+      DATA(found) = ''.
+
       DO samplesize TIMES.
-        index_no = o_randomer->get_next( ).
-        READ TABLE t_sample REFERENCE INTO DATA(r_sample) INDEX index_no.
-        IF sy-subrc NE 0.
-          READ TABLE t_sample REFERENCE INTO r_sample INDEX 1.
-        ENDIF.
+
+        WHILE found EQ ''.
+          index_no = o_randomer->get_next( ).
+          READ TABLE t_sample REFERENCE INTO DATA(r_sample) INDEX index_no.
+          IF sy-subrc EQ 0.
+            found = 'X'.
+          ENDIF.
+        ENDWHILE.
+
         ls_sample = VALUE #(
           value1 = r_sample->value1
           value2 = r_sample->value2
           y = r_sample->error
         ).
-        INSERT ls_sample INTO TABLE t_trimmed_sample.
+        INSERT ls_sample INTO TABLE t_trimmed_sample. "for training
         DELETE t_sample WHERE id EQ r_sample->id.
+        found = ''.
       ENDDO.
 
 

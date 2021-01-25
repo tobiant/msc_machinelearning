@@ -98,6 +98,18 @@
      <MSGNR>014</MSGNR>
      <TEXT>New Ping id created. &amp;1.</TEXT>
     </T100>
+    <T100>
+     <SPRSL>D</SPRSL>
+     <ARBGB>ZMC_MAINT</ARBGB>
+     <MSGNR>015</MSGNR>
+     <TEXT>New error probability: &amp;1</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>D</SPRSL>
+     <ARBGB>ZMC_MAINT</ARBGB>
+     <MSGNR>016</MSGNR>
+     <TEXT>New notification &amp;1 created</TEXT>
+    </T100>
    </T100>
   </asx:values>
  </asx:abap>

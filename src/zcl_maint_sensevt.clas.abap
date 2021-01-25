@@ -143,49 +143,6 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
     gs_notitem-descript = | Ausfallwahrscheinlichkeit { g_last_err_probability }% |.
     INSERT gs_notitem INTO TABLE gt_notitem.
 
-*gt_notitem-item_key = '0002'.
-*gt_notitem-item_sort_no = '0002'.
-*gt_notitem-dl_codegrp = 'PM1'. " parte objeto
-*gt_notitem-dl_code = '2'.
-**gt_notitem-d_codegrp = 'S.LAVBOT'. " sint. averia
-**gt_notitem-d_codegrp = '0010'.
-*gt_notitem-descript = 'Ausnahme2 aufgetreten'.
-*
-*APPEND gt_notitem.
-
-* Position mit Meldungsgrund
-*gt_notifcaus-cause_key = '0002'.
-*gt_notifcaus-cause_sort_no = '0001'.
-*gt_notifcaus-item_key = '0002'.
-*gt_notifcaus-cause_codegrp = 'C.LAVBOT'.
-*gt_notifcaus-cause_code = '0010'.
-*gt_notifcaus-causetext = 'CAUSAS PRUEBA'.
-
-*APPEND gt_notifcaus.
-
-*texto de cabecera
-*gt_longtexts-objtype = 'QMEL'.
-*gt_longtexts-objkey = '0001'.
-*gt_longtexts-format_col = '*'.
-*gt_longtexts-text_line = 'Linea 1 Prueba de Texto'.
-
-*APPEND gt_longtexts.
-
-*texto de notificacion
-*gt_longtexts-objtype = 'QMFE'.
-*gt_longtexts-objkey = '0002'.
-*gt_longtexts-format_col = '*'.
-*gt_longtexts-text_line = 'Linea 1A Prueba de Texto'.
-
-*APPEND gt_longtexts.
-
-*texto de causa
-*gt_longtexts-objtype = 'QMUR'.
-*gt_longtexts-objkey = '0003'.
-*gt_longtexts-format_col = '*'.
-*gt_longtexts-text_line = 'Linea 1B Prueba de Texto'.
-
-*APPEND gt_longtexts.
 
 
     CALL FUNCTION 'BAPI_ALM_NOTIF_CREATE'
@@ -202,6 +159,7 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
 
     CHECK g_ind IS INITIAL.
 
+
     CALL FUNCTION 'BAPI_ALM_NOTIF_SAVE'
       EXPORTING
         number      = gs_notifheader_export-notif_no
@@ -209,6 +167,17 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
         notifheader = gs_return_notifheader
       TABLES
         return      = gt_return.
+
+
+    DATA(log_msg) = VALUE bal_s_msg( ).
+    log_msg = VALUE #(
+      msgty = 'I'
+      msgid = 'ZMC_MAINT'
+      msgv1 = gs_return_notifheader-notif_no
+      msgno = '016'
+    ).
+    me->log_message( is_message = log_msg ).
+
 
     CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
       IMPORTING
@@ -235,13 +204,6 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
 
 
   METHOD notify_clients.
-
-
-
-
-
-
-
 
 
     DATA lv_rfc_name TYPE tfdir-funcname.
@@ -276,7 +238,17 @@ CLASS ZCL_MAINT_SENSEVT IMPLEMENTATION.
         ).
         DATA err TYPE p LENGTH 3 DECIMALS 2.
         err = o_logreg->calc_y_hat(  ).
-        g_last_err_probability = err * 100.
+        me->g_last_err_probability = err * 100.
+
+        DATA(log_msg) = VALUE bal_s_msg( ).
+          log_msg = VALUE #(
+            msgty = 'I'
+            msgid = 'ZMC_MAINT'
+            msgv1 = me->g_last_err_probability
+            msgno = '015'
+          ).
+          me->log_message( is_message = log_msg ).
+
 
         IF err > g_notification_threshold.
           create_notification( ).
